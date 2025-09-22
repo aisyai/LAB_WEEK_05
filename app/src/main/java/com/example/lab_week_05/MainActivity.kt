@@ -51,22 +51,30 @@ class MainActivity : AppCompatActivity() {
                 Log.e(MAIN_ACTIVITY, "Failed to get response", t)
             }
 
+            @SuppressLint("SetTextI18n")
             override fun onResponse(
                 call: Call<List<ImageData>>,
                 response: Response<List<ImageData>>
             ) {
                 if (response.isSuccessful) {
-                    val image = response.body()
-                    val firstImage = image?.firstOrNull()?.imageUrl.orEmpty() // pake 'url' biar match data class
-                    if (firstImage.isNotBlank()) {
-                        imageLoader.loadImage(firstImage, imageResultView)
+                    val imageList = response.body()
+                    val firstImage = imageList?.firstOrNull()
+
+                    if (firstImage != null) {
+                        val firstImageUrl = firstImage.url
+
+                        // Aman, kalau breeds null atau kosong → "Unknown"
+                        val breedName = firstImage.breeds?.firstOrNull()?.name ?: "Unknown"
+
+                        imageLoader.loadImage(firstImageUrl, imageResultView)
+
+                        apiResponseView.text = getString(
+                            R.string.image_placeholder,
+                            breedName
+                        )
                     } else {
-                        Log.d(MAIN_ACTIVITY, "Missing image URL")
+                        apiResponseView.text = "No cat found 🐱"
                     }
-                    apiResponseView.text = getString(
-                        R.string.image_placeholder,
-                        firstImage
-                    )
                 } else {
                     Log.e(
                         MAIN_ACTIVITY,
@@ -76,7 +84,6 @@ class MainActivity : AppCompatActivity() {
             }
         })
     }
-
 
     companion object {
         const val MAIN_ACTIVITY = "MAIN_ACTIVITY"
