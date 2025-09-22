@@ -12,6 +12,8 @@ import retrofit2.Callback
 import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
+import kotlin.getValue
+import android.widget.ImageView
 
 class MainActivity : AppCompatActivity() {
 
@@ -25,6 +27,14 @@ class MainActivity : AppCompatActivity() {
     }
     private val catApiService = retrofit.create(CatApiService::class.java)
 
+    private val imageResultView: ImageView by lazy {
+        findViewById(R.id.image_result)
+    }
+
+    private val imageLoader: ImageLoader by lazy {
+        GlideLoader(this)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -37,26 +47,36 @@ class MainActivity : AppCompatActivity() {
     private fun getCatImageDataResponse() {
         val call = catApiService.searchImages(1, "full")
         call.enqueue(object : Callback<List<ImageData>> {
-            @SuppressLint("SetTextI18n")
             override fun onFailure(call: Call<List<ImageData>>, t: Throwable) {
                 Log.e(MAIN_ACTIVITY, "Failed to get response", t)
-                apiResponseView.text = "Request failed: ${t.message}"
             }
 
-            override fun onResponse(call: Call<List<ImageData>>, response: Response<List<ImageData>>) {
-                if(response.isSuccessful){
+            override fun onResponse(
+                call: Call<List<ImageData>>,
+                response: Response<List<ImageData>>
+            ) {
+                if (response.isSuccessful) {
                     val image = response.body()
-                    val firstImage = image?.firstOrNull()?.imageUrl ?: "No URL"
-                    apiResponseView.text = getString(R.string.image_placeholder, firstImage)
-                }
-                else{
-                    Log.e(MAIN_ACTIVITY, "Failed to get response\n" +
-                            response.errorBody()?.string().orEmpty()
+                    val firstImage = image?.firstOrNull()?.imageUrl.orEmpty() // pake 'url' biar match data class
+                    if (firstImage.isNotBlank()) {
+                        imageLoader.loadImage(firstImage, imageResultView)
+                    } else {
+                        Log.d(MAIN_ACTIVITY, "Missing image URL")
+                    }
+                    apiResponseView.text = getString(
+                        R.string.image_placeholder,
+                        firstImage
+                    )
+                } else {
+                    Log.e(
+                        MAIN_ACTIVITY,
+                        "Failed to get response\n${response.errorBody()?.string().orEmpty()}"
                     )
                 }
             }
         })
     }
+
 
     companion object {
         const val MAIN_ACTIVITY = "MAIN_ACTIVITY"
